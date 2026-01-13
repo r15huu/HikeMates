@@ -1,17 +1,18 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-function NavLink({ to, children }) {
+function NavLink({ to, children, onClick }) {
   const { pathname } = useLocation();
   const active = pathname === to;
   return (
     <Link
       to={to}
-      className={
-        "px-3 py-2 rounded-lg text-sm font-medium transition " +
-        (active
-          ? "bg-forest-600 text-white shadow"
-          : "text-slate-700 hover:bg-white/60 hover:text-slate-900")
-      }
+      onClick={onClick}
+      className={`px-5 py-2 rounded-2xl text-sm font-bold transition-all duration-300 ${
+        active 
+          ? "bg-forest-600 text-white shadow-lg shadow-forest-200 scale-105" 
+          : "text-slate-600 hover:text-forest-700 hover:bg-white/50"
+      }`}
     >
       {children}
     </Link>
@@ -20,38 +21,70 @@ function NavLink({ to, children }) {
 
 export default function Navbar() {
   const nav = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    nav("/login");
+  };
 
   return (
-    <div className="sticky top-0 z-50 border-b border-white/40 bg-white/60 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-        <Link to="/hikes" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-forest-600 text-white grid place-items-center font-bold shadow">
-            H
-          </div>
-          <div className="leading-tight">
-            <div className="font-semibold text-slate-900">HikeMates</div>
-            <div className="text-xs text-slate-500">Find your next trail</div>
-          </div>
-        </Link>
+    <div className={`fixed top-0 left-0 right-0 z-50 px-6 transition-all duration-500 ${scrolled ? "pt-3" : "pt-6"}`}>
+      <nav className={`mx-auto max-w-5xl rounded-[2.5rem] border transition-all duration-500 ${
+        scrolled 
+        ? "border-white/40 bg-white/70 backdrop-blur-xl shadow-2xl shadow-slate-200/50" 
+        : "border-transparent bg-transparent"
+      }`}>
+        <div className="px-6 h-20 flex items-center justify-between">
+          <Link to="/hikes" className="flex items-center gap-3 group">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-forest-500 to-forest-700 text-white flex items-center justify-center font-black text-xl shadow-lg group-hover:rotate-6 transition-transform">
+              H
+            </div>
+            <span className="text-xl font-black text-slate-900 tracking-tighter">HikeMates</span>
+          </Link>
 
-        <div className="flex items-center gap-2">
-          <NavLink to="/hikes">Explore</NavLink>
-          <NavLink to="/my-hikes">My Hikes</NavLink>
-          <NavLink to="/hikes/new">Create</NavLink>
-          <NavLink to="/me">Profile</NavLink>
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-2">
+            <NavLink to="/hikes">Explore</NavLink>
+            <NavLink to="/my-hikes">My Hikes</NavLink>
+            <NavLink to="/hikes/new">Create</NavLink>
+            <NavLink to="/me">Profile</NavLink>
+            <div className="w-px h-6 bg-slate-200 mx-3" />
+            <button 
+              onClick={logout}
+              className="px-6 py-2.5 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
+            >
+              Logout
+            </button>
+          </div>
 
-          <button
-            className="ml-2 px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800"
-            onClick={() => {
-              localStorage.removeItem("access");
-              localStorage.removeItem("refresh");
-              nav("/login");
-            }}
-          >
-            Logout
+          {/* Mobile Toggle */}
+          <button onClick={() => setIsOpen(!isOpen)} className="md:hidden p-2 text-slate-900 hover:bg-white/50 rounded-xl transition-colors">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"} />
+            </svg>
           </button>
         </div>
-      </div>
+
+        {/* Mobile Menu */}
+        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+          <div className="p-6 border-t border-slate-100 flex flex-col gap-3 bg-white/90 backdrop-blur-lg rounded-b-[2.5rem]">
+            <NavLink to="/hikes" onClick={() => setIsOpen(false)}>Explore</NavLink>
+            <NavLink to="/my-hikes" onClick={() => setIsOpen(false)}>My Hikes</NavLink>
+            <NavLink to="/hikes/new" onClick={() => setIsOpen(false)}>Create</NavLink>
+            <NavLink to="/me" onClick={() => setIsOpen(false)}>Profile</NavLink>
+            <button onClick={logout} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold mt-2">Logout</button>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }

@@ -25,10 +25,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // 1) create user
       await api.post("/api/auth/register/", form);
-
-      // 2) login immediately after signup
       const res = await api.post("/api/auth/token/", {
         username: form.username,
         password: form.password,
@@ -36,94 +33,103 @@ export default function Register() {
 
       localStorage.setItem("access", res.data.access);
       localStorage.setItem("refresh", res.data.refresh);
-
-      nav("/hikes"); // nicer flow than /me
+      nav("/hikes");
     } catch (e2) {
-      setErr(e2?.response?.data?.detail || JSON.stringify(e2?.response?.data) || "Error");
+      setErr(e2?.response?.data?.detail || "Registration failed. Check your details.");
     } finally {
       setLoading(false);
     }
   }
 
+  const inputClass = "w-full rounded-2xl border border-slate-200 bg-white/50 px-5 py-4 outline-none focus:ring-4 focus:ring-forest-500/10 focus:border-forest-500 transition-all font-bold text-slate-900 placeholder:text-slate-300";
+
   return (
     <Layout>
-      <div className="max-w-md mx-auto">
-        <div className="rounded-2xl bg-white/80 border border-white shadow-sm p-6">
-          <h2 className="text-2xl font-bold text-slate-900">Create your account</h2>
-          <p className="text-slate-600 mt-1">Join hikes, meet people, and plan trails together.</p>
+      <div className="max-w-xl mx-auto">
+        <div className="bg-white/70 backdrop-blur-xl rounded-[3rem] border border-white/50 p-10 shadow-2xl shadow-slate-200/50">
+          <header className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-forest-50 text-forest-600 shadow-inner mb-6">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">Create Your Explorer Profile.</h2>
+            <p className="text-slate-500 font-medium mt-3">Join thousands of hikers across the globe.</p>
+          </header>
 
           {err && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+            <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm font-bold">
               {err}
             </div>
           )}
 
-          <form onSubmit={submit} className="mt-6 grid gap-3">
-            <div>
-              <label className="text-sm font-medium text-slate-700">Username</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-forest-200"
-                placeholder="testuser2"
-                value={form.username}
-                onChange={(e) => update("username", e.target.value)}
-                autoComplete="username"
-                required
-              />
+          <form onSubmit={submit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-2">Username</label>
+                <input
+                  className={inputClass}
+                  placeholder="hiker_pro"
+                  value={form.username}
+                  onChange={(e) => update("username", e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-2">Email</label>
+                <input
+                  className={inputClass}
+                  placeholder="name@trail.com"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-700">Email</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-forest-200"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={(e) => update("email", e.target.value)}
-                autoComplete="email"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-700">Password</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-forest-200"
-                placeholder="••••••••"
-                type="password"
-                value={form.password}
-                onChange={(e) => update("password", e.target.value)}
-                autoComplete="new-password"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-700">Confirm password</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-forest-200"
-                placeholder="••••••••"
-                type="password"
-                value={form.password2}
-                onChange={(e) => update("password2", e.target.value)}
-                autoComplete="new-password"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-2">Password</label>
+                <input
+                  className={inputClass}
+                  placeholder="••••••••"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => update("password", e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-2">Confirm</label>
+                <input
+                  className={inputClass}
+                  placeholder="••••••••"
+                  type="password"
+                  value={form.password2}
+                  onChange={(e) => update("password2", e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 px-4 py-2 rounded-xl bg-forest-600 text-white shadow hover:bg-forest-700 transition disabled:opacity-60"
+              className="w-full mt-4 py-5 rounded-[2rem] bg-forest-600 text-white font-black text-lg shadow-2xl shadow-forest-100 hover:bg-forest-700 hover:scale-[1.01] transition-all active:scale-95 disabled:opacity-60"
             >
-              {loading ? "Creating..." : "Create account"}
+              {loading ? "Establishing Connection..." : "Begin Your Adventure"}
             </button>
           </form>
 
-          <p className="mt-4 text-sm text-slate-600">
-            Already have an account?{" "}
-            <Link className="font-semibold text-forest-700 hover:text-forest-800" to="/login">
-              Login
-            </Link>
-          </p>
+          <div className="mt-10 pt-8 border-t border-slate-100 text-center">
+            <p className="text-slate-500 font-bold">
+              Already have an account?{" "}
+              <Link className="text-forest-600 hover:underline" to="/login">
+                Log in here
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </Layout>

@@ -6,12 +6,10 @@ import Layout from "../components/layout";
 export default function Me() {
   const nav = useNavigate();
   const [me, setMe] = useState(null);
-  const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      setErr("");
       setLoading(true);
       try {
         const res = await api.get("/api/auth/me/");
@@ -33,90 +31,81 @@ export default function Me() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900">My Profile</h2>
-            <p className="text-slate-600 mt-1">Your account info and quick links.</p>
+      <div className="max-w-5xl mx-auto">
+        {/* Profile Header */}
+        <div className="flex flex-col md:flex-row items-center gap-10 mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="relative group">
+            <div className="w-40 h-40 rounded-[3.5rem] bg-gradient-to-br from-forest-500 to-emerald-700 flex items-center justify-center text-6xl font-black text-white shadow-2xl shadow-forest-200 group-hover:rotate-3 transition-transform">
+              {me?.username?.[0].toUpperCase()}
+            </div>
+            <div className="absolute -bottom-2 -right-2 w-14 h-14 rounded-full bg-white border-8 border-slate-50 flex items-center justify-center shadow-xl text-2xl">
+              🌲
+            </div>
           </div>
-
-          <button
+          
+          <div className="text-center md:text-left">
+            <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-3">
+              Howdy, {me?.username}!
+            </h2>
+            <p className="text-slate-400 font-black tracking-[0.3em] uppercase text-xs">
+              {me?.email} • EXPLORER SINCE 2026
+            </p>
+          </div>
+          
+          <button 
             onClick={logout}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white shadow hover:bg-slate-800 transition"
+            className="md:ml-auto px-10 py-5 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all active:scale-95 shadow-sm"
           >
             Logout
           </button>
         </div>
 
-        {/* Quick links */}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            to="/hikes"
-            className="px-4 py-2 rounded-xl bg-white/80 border border-white shadow-sm hover:shadow transition"
-          >
-            All Hikes
-          </Link>
-
-          <Link
-            to="/my-hikes"
-            className="px-4 py-2 rounded-xl bg-white/80 border border-white shadow-sm hover:shadow transition"
-          >
-            My Hikes
-          </Link>
-
-          <Link
-            to="/hikes/new"
-            className="px-4 py-2 rounded-xl bg-forest-600 text-white shadow hover:bg-forest-700 transition"
-          >
-            + Create Hike
-          </Link>
-        </div>
-
-        {err && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-            {err}
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 h-64 bg-white rounded-[3rem] animate-pulse" />
+            <div className="h-64 bg-white rounded-[3rem] animate-pulse" />
           </div>
-        )}
-
-        {loading && <p className="mt-6 text-slate-600">Loading...</p>}
-
-        {!loading && me && (
-          <div className="mt-6 rounded-2xl bg-white/80 border border-white shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-slate-500">Username</div>
-                <div className="text-lg font-semibold text-slate-900">{me.username}</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            {/* Bio Card */}
+            <div className="lg:col-span-2 space-y-10">
+              <div className="bg-white/70 backdrop-blur-xl rounded-[3rem] p-12 border border-white/50 shadow-xl shadow-slate-200/30">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-forest-600 mb-8 flex items-center gap-4">
+                  <span className="h-px w-8 bg-forest-200" /> About You
+                </h3>
+                <p className="text-slate-600 leading-relaxed font-bold text-2xl italic">
+                  "{me?.bio || "No trail bio yet. Your adventures speak for themselves."}"
+                </p>
               </div>
 
-              <div className="text-right">
-                <div className="text-sm text-slate-500">Email</div>
-                <div className="text-sm font-medium text-slate-800">{me.email}</div>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="text-sm text-slate-500">Public profile</div>
-                <div className="text-sm font-semibold text-slate-900">
-                  {me.is_public ? "Yes" : "No"}
+              {/* Stats Bar */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="bg-white rounded-[2.5rem] p-10 border border-slate-50 shadow-sm text-center group">
+                  <div className="text-5xl font-black text-forest-600 mb-2 group-hover:scale-110 transition-transform">✓</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Active</div>
+                </div>
+                <div className="bg-white rounded-[2.5rem] p-10 border border-slate-50 shadow-sm text-center group">
+                  <div className="text-5xl font-black text-slate-900 mb-2 group-hover:scale-110 transition-transform">0</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Peaks Conquered</div>
                 </div>
               </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="text-sm text-slate-500">Bio</div>
-                <div className="text-sm text-slate-800">{me.bio || "—"}</div>
-              </div>
             </div>
 
-            {/* Debug JSON (optional) */}
-            <details className="mt-5">
-              <summary className="cursor-pointer text-sm font-semibold text-forest-700">
-                View raw JSON (debug)
-              </summary>
-              <pre className="mt-3 text-xs bg-slate-900 text-slate-100 rounded-xl p-4 overflow-auto">
-                {JSON.stringify(me, null, 2)}
-              </pre>
-            </details>
+            {/* Quick Actions Sidebar */}
+            <div className="space-y-6">
+              <Link to="/hikes/new" className="block p-10 rounded-[3rem] bg-forest-600 text-white shadow-2xl shadow-forest-200 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+                <div className="relative z-10">
+                  <span className="block text-3xl font-black mb-2 leading-none">Host Hike →</span>
+                  <span className="text-forest-100 font-bold text-sm opacity-80 uppercase tracking-widest">Lead a new group</span>
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl" />
+              </Link>
+              
+              <Link to="/my-hikes" className="block p-10 rounded-[3rem] bg-white border border-slate-100 shadow-sm hover:shadow-2xl transition-all group">
+                <span className="block text-3xl font-black text-slate-900 mb-2 leading-none group-hover:text-forest-600 transition-colors">Schedule</span>
+                <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">Review your trails</span>
+              </Link>
+            </div>
           </div>
         )}
       </div>
