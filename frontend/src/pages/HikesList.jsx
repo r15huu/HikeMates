@@ -10,33 +10,41 @@ function Badge({ children, tone = "green" }) {
     orange: "bg-orange-50 text-orange-700 border-orange-100",
   };
   return (
-    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${tones[tone]}`}>
+    <span
+      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${tones[tone]}`}
+    >
       {children}
     </span>
   );
 }
 
-function Card({ h, onJoin, onDetails, busy }) {
-  const intensityTone = h.intensity === "hard" ? "orange" : h.intensity === "medium" ? "slate" : "green";
-  
+function Card({ h, onJoin, onDetails, busy, authed }) {
+  const intensityTone =
+    h.intensity === "hard" ? "orange" : h.intensity === "medium" ? "slate" : "green";
+
+  const joinLabel = !authed ? "Login to Join" : busy ? "..." : "Join";
+
   return (
     <div className="group bg-white/70 backdrop-blur-md rounded-[2.5rem] border border-white/50 p-2 shadow-sm hover:shadow-2xl hover:-translate-y-3 transition-all duration-500">
       <div className="bg-slate-50/50 rounded-[2rem] p-8 h-full flex flex-col relative overflow-hidden">
-        {/* Subtle decorative circle */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-forest-100/20 rounded-full blur-2xl group-hover:bg-forest-200/40 transition-colors" />
 
         <div className="flex justify-between items-start mb-6 relative z-10">
           <Badge tone={h.visibility === "private" ? "slate" : "green"}>{h.visibility}</Badge>
           <div className="text-right">
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-tighter">Availability</span>
-            <span className="text-xs font-bold text-slate-900">{h.member_count}/{h.max_people} spots</span>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+              Availability
+            </span>
+            <span className="text-xs font-bold text-slate-900">
+              {h.member_count}/{h.max_people} spots
+            </span>
           </div>
         </div>
 
         <h3 className="text-2xl font-black text-slate-900 mb-3 leading-tight group-hover:text-forest-600 transition-colors relative z-10">
           {h.title}
         </h3>
-        
+
         <p className="text-slate-500 font-medium text-sm mb-8 flex items-center gap-2 relative z-10">
           <span className="bg-white p-1.5 rounded-lg shadow-sm">📍</span> {h.location_name}
         </p>
@@ -47,20 +55,27 @@ function Card({ h, onJoin, onDetails, busy }) {
         </div>
 
         <div className="mt-auto flex items-center gap-3 relative z-10">
-          <button 
+          <button
             onClick={onDetails}
             className="flex-1 py-4 rounded-2xl bg-white border border-slate-200 text-slate-900 font-bold hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
           >
             Details
           </button>
-          <button 
+
+          <button
             onClick={onJoin}
-            disabled={busy}
+            disabled={authed ? busy : false}
             className="flex-1 py-4 rounded-2xl bg-forest-600 text-white font-bold hover:bg-forest-700 transition-all active:scale-95 shadow-lg shadow-forest-200 disabled:opacity-50"
           >
-            {busy ? "..." : "Join"}
+            {joinLabel}
           </button>
         </div>
+
+        {!authed && (
+          <p className="mt-4 text-xs text-slate-400 font-semibold relative z-10">
+            Tip: You can browse as a guest — login is only needed to join or create hikes.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -68,23 +83,31 @@ function Card({ h, onJoin, onDetails, busy }) {
 
 export default function HikesList() {
   const nav = useNavigate();
+
   const [hikes, setHikes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joiningId, setJoiningId] = useState(null);
+  const [err, setErr] = useState("");
+
+  const authed = !!localStorage.getItem("access");
 
   async function loadHikes() {
     setLoading(true);
+    setErr("");
     try {
       const res = await api.get("/api/hikes/");
       setHikes(res.data);
     } catch {
-      nav("/login");
+      // Do NOT redirect to login — guests can browse
+      setErr("Could not load hikes. Is the backend server running?");
     } finally {
       setLoading(false);
     }
   }
 
   async function joinHike(hikeId) {
+    if (!authed) return nav("/login");
+
     setJoiningId(hikeId);
     try {
       await api.post(`/api/hikes/${hikeId}/join/`);
@@ -96,27 +119,77 @@ export default function HikesList() {
     }
   }
 
-  useEffect(() => { loadHikes(); }, []);
+  function openDetails(h) {
+    // Optional: if private and not authed, send to login
+    if (h.visibility === "private" && !authed) return nav("/login");
+    nav(`/hikes/${h.id}`);
+  }
+
+  useEffect(() => {
+    loadHikes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Layout>
-      <div className="text-center mb-24 relative">
-        <div className="inline-block px-4 py-2 mb-8 rounded-full bg-forest-50 border border-forest-100 text-forest-700 text-[10px] font-black uppercase tracking-[0.2em] animate-bounce shadow-sm">
+      <div className="text-center mb-16 md:mb-24 relative">
+        <div className="inline-block px-4 py-2 mb-8 rounded-full bg-forest-50 border border-forest-100 text-forest-700 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm">
           🌲 Discovery Mode Active
         </div>
-        <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter mb-8 leading-[0.9]">
+
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter mb-6 md:mb-8 leading-[0.95]">
           Find Your <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-forest-600 to-emerald-500">Next Adventure.</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-forest-600 to-emerald-500">
+            Next Adventure.
+          </span>
         </h1>
-        <p className="max-w-xl mx-auto text-slate-500 text-xl font-medium leading-relaxed">
-          The ultimate platform for outdoor enthusiasts. Explore hidden trails, meet hikers, and conquer summits together.
+
+        <p className="max-w-2xl mx-auto text-slate-500 text-lg md:text-xl font-medium leading-relaxed">
+          Explore upcoming hikes as a guest. Create and join hikes when you’re ready.
         </p>
+
+        {/* Top action bar */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          {authed ? (
+            <button
+              onClick={() => nav("/hikes/new")}
+              className="px-8 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-slate-800 active:scale-95 transition"
+            >
+              + Create a Hike
+            </button>
+          ) : (
+            <button
+              onClick={() => nav("/login")}
+              className="px-8 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-slate-800 active:scale-95 transition"
+            >
+              Login to Create
+            </button>
+          )}
+
+          {!authed && (
+            <button
+              onClick={() => nav("/register")}
+              className="px-8 py-4 rounded-2xl bg-forest-600 text-white font-black shadow-xl shadow-forest-100 hover:bg-forest-700 active:scale-95 transition"
+            >
+              Sign Up
+            </button>
+          )}
+        </div>
+
+        {err && (
+          <div className="mt-10 max-w-xl mx-auto p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 font-bold text-sm">
+            {err}
+          </div>
+        )}
       </div>
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="h-[400px] rounded-[2.5rem] bg-white animate-pulse shadow-sm border border-slate-100" />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-[400px] rounded-[2.5rem] bg-white animate-pulse shadow-sm border border-slate-100"
+            />
           ))}
         </div>
       ) : (
@@ -125,9 +198,10 @@ export default function HikesList() {
             <Card
               key={h.id}
               h={h}
+              authed={authed}
               busy={joiningId === h.id}
               onJoin={() => joinHike(h.id)}
-              onDetails={() => nav(`/hikes/${h.id}`)}
+              onDetails={() => openDetails(h)}
             />
           ))}
         </div>

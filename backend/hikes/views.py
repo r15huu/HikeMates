@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Hike, HikeMembership, JoinRequest
@@ -20,17 +21,30 @@ def is_hike_member(hike: Hike, user) -> bool:
 class HikeViewSet(viewsets.ModelViewSet):
     serializer_class = HikeSerializer
 
+    def get_permissions(self):
+        """
+        Public browsing:
+        - Anyone (even logged out) can LIST and RETRIEVE hikes (public ones only).
+        Protected:
+        - Everything else requires login (join, create, my hikes, approvals, etc.)
+        """
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
     def get_queryset(self):
         """
         Privacy rule (IMPORTANT):
-        - Anyone logged in can see all PUBLIC hikes
-        - You can also see PRIVATE hikes ONLY if you are a member/admin
-        This protects private hike details automatically because retrieve() uses queryset.
+        - Logged OUT users can see only PUBLIC hikes.
+        - Logged IN users can see:
+            (a) all PUBLIC hikes
+            (b) PRIVATE hikes ONLY if they are a member/admin
+        This also protects private hike details automatically because retrieve() uses queryset.
         """
         user = self.request.user
 
-        # If your project ever allows anonymous users later, you can do:
-        # if not user.is_authenticated: return Hike.objects.filter(visibility=Hike.PUBLIC)
+        if not user.is_authenticated:
+            return Hike.objects.filter(visibility=Hike.PUBLIC).order_by("-created_at")
 
         return (
             Hike.objects.filter(Q(visibility=Hike.PUBLIC) | Q(memberships__user=user))
@@ -51,7 +65,6 @@ class HikeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         hike = serializer.save(creator=self.request.user)
-        # creator automatically becomes admin
         HikeMembership.objects.create(
             hike=hike, user=self.request.user, role=HikeMembership.ADMIN
         )
@@ -79,7 +92,6 @@ class HikeViewSet(viewsets.ModelViewSet):
         hike = self.get_object()
         user = request.user
 
-        # already a member?
         if is_hike_member(hike, user):
             return Response({"detail": "Already joined."}, status=400)
 
@@ -87,12 +99,10 @@ class HikeViewSet(viewsets.ModelViewSet):
             HikeMembership.objects.create(hike=hike, user=user, role=HikeMembership.MEMBER)
             return Response({"detail": "Joined public hike."}, status=200)
 
-        # private hike: create join request (allow resubmitting if previously rejected)
         jr = JoinRequest.objects.filter(hike=hike, user=user).first()
         if jr:
             if jr.status == JoinRequest.PENDING:
                 return Response({"detail": "Join request already pending."}, status=400)
-            # if it was rejected/approved, reset to pending (approved would mean membership exists, but safe anyway)
             jr.status = JoinRequest.PENDING
             jr.save()
             return Response({"detail": "Join request created."}, status=201)
@@ -102,11 +112,6 @@ class HikeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["POST"])
     def leave(self, request, pk=None):
-        """
-        POST /api/hikes/<id>/leave/
-        Lets a member leave a hike.
-        Safety: prevents the last admin from leaving (so the hike isn't orphaned).
-        """
         hike = self.get_object()
         user = request.user
 
@@ -119,18 +124,16 @@ class HikeViewSet(viewsets.ModelViewSet):
                 hike=hike, role=HikeMembership.ADMIN
             ).exclude(user=user)
             if not other_admins.exists():
-                return Response({"detail": "You are the last admin. Assign another admin before leaving."}, status=400)
+                return Response(
+                    {"detail": "You are the last admin. Assign another admin before leaving."},
+                    status=400
+                )
 
         membership.delete()
         return Response({"detail": "Left hike."}, status=200)
 
     @action(detail=True, methods=["POST"])
     def cancel_request(self, request, pk=None):
-        """
-        POST /api/hikes/<id>/cancel_request/
-        User cancels their own pending join request (private hikes).
-        We'll delete the row to keep model statuses simple.
-        """
         hike = self.get_object()
         user = request.user
 
@@ -174,11 +177,6 @@ class HikeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["POST"])
     def reject_request(self, request, pk=None):
-        """
-        POST /api/hikes/<id>/reject_request/
-        body: { "request_id": <id> }
-        Admin rejects a pending request.
-        """
         hike = self.get_object()
         if not is_hike_admin(hike, request.user):
             return Response({"detail": "Admin only."}, status=403)
@@ -197,11 +195,6 @@ class HikeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["POST"])
     def remove_member(self, request, pk=None):
-        """
-        POST /api/hikes/<id>/remove_member/
-        body: { "user_id": <id> }
-        Admin removes a member from the hike.
-        """
         hike = self.get_object()
         if not is_hike_admin(hike, request.user):
             return Response({"detail": "Admin only."}, status=403)
@@ -210,7 +203,6 @@ class HikeViewSet(viewsets.ModelViewSet):
         if not user_id:
             return Response({"detail": "user_id is required"}, status=400)
 
-        # Prevent removing yourself if you're the last admin
         if str(user_id) == str(request.user.id):
             last_admin = (
                 HikeMembership.objects.filter(hike=hike, role=HikeMembership.ADMIN).count() == 1
