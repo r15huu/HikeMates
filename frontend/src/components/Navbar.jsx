@@ -27,7 +27,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Simple auth check (token presence)
+  // auth check (token presence)
   const authed = !!localStorage.getItem("access");
 
   // Dropdown (desktop)
@@ -68,7 +68,7 @@ export default function Navbar() {
     go("/login");
   };
 
-  // initials (no useMemo)
+  // initials
   const u = localStorage.getItem("username") || "";
   const parts = u.trim().split(/\s+/).filter(Boolean);
   const a = parts[0]?.[0] || "U";
@@ -97,7 +97,7 @@ export default function Navbar() {
         <div className="px-6 h-20 flex items-center justify-between">
           {/* Logo */}
           <Link
-            to={authed ? "/hikes" : "/"}
+            to="/"
             onClick={closeMenus}
             className="flex items-center gap-3 group"
           >
@@ -111,36 +111,16 @@ export default function Navbar() {
 
           {/* Desktop */}
           <div className="hidden md:flex items-center gap-2">
-            {!authed ? (
+            {/* guests CAN browse */}
+            <NavLink to="/trails" onClick={closeMenus}>
+              Explore Trails
+            </NavLink>
+            <NavLink to="/hikes" onClick={closeMenus}>
+              Explore Hikes
+            </NavLink>
+
+            {authed ? (
               <>
-                {!isAuthPage && (
-                  <button
-                    onClick={() => go("/login")}
-                    className="px-5 py-2 rounded-2xl text-sm font-bold text-slate-600 hover:text-forest-700 hover:bg-white/50 transition"
-                  >
-                    Explore
-                  </button>
-                )}
-
-                <div className="w-px h-6 bg-slate-200 mx-3" />
-
-                <NavLink to="/login" onClick={closeMenus}>
-                  Login
-                </NavLink>
-
-                <Link
-                  to="/register"
-                  onClick={closeMenus}
-                  className="px-6 py-2.5 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
-                >
-                  Sign Up
-                </Link>
-              </>
-            ) : (
-              <>
-                <NavLink to="/hikes" onClick={closeMenus}>
-                  Explore
-                </NavLink>
                 <NavLink to="/my-hikes" onClick={closeMenus}>
                   My Hikes
                 </NavLink>
@@ -198,6 +178,24 @@ export default function Navbar() {
                   )}
                 </div>
               </>
+            ) : (
+              <>
+                <div className="w-px h-6 bg-slate-200 mx-3" />
+
+                {!isAuthPage && (
+                  <NavLink to="/login" onClick={closeMenus}>
+                    Login
+                  </NavLink>
+                )}
+
+                <Link
+                  to="/register"
+                  onClick={closeMenus}
+                  className="px-6 py-2.5 rounded-2xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
+                >
+                  Sign Up
+                </Link>
+              </>
             )}
           </div>
 
@@ -206,7 +204,12 @@ export default function Navbar() {
             onClick={() => setIsOpen((v) => !v)}
             className="md:hidden p-2 text-slate-900 hover:bg-white/50 rounded-xl transition-colors"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -224,33 +227,25 @@ export default function Navbar() {
         {/* Mobile Menu */}
         <div
           className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-            isOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
+            isOpen ? "max-h-[620px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
           <div className="p-6 border-t border-slate-100 flex flex-col gap-3 bg-white/90 backdrop-blur-lg rounded-b-[2.5rem]">
-            {!authed ? (
+            <button
+              onClick={() => go("/trails")}
+              className="text-left px-5 py-3 rounded-2xl font-bold hover:bg-white/60"
+            >
+              Explore Trails
+            </button>
+            <button
+              onClick={() => go("/hikes")}
+              className="text-left px-5 py-3 rounded-2xl font-bold hover:bg-white/60"
+            >
+              Explore Hikes
+            </button>
+
+            {authed ? (
               <>
-                <button
-                  onClick={() => go("/login")}
-                  className="w-full py-4 rounded-2xl font-bold text-slate-700 bg-white/60 border border-slate-200"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => go("/register")}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold"
-                >
-                  Sign Up
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => go("/hikes")}
-                  className="text-left px-5 py-3 rounded-2xl font-bold hover:bg-white/60"
-                >
-                  Explore
-                </button>
                 <button
                   onClick={() => go("/my-hikes")}
                   className="text-left px-5 py-3 rounded-2xl font-bold hover:bg-white/60"
@@ -277,6 +272,23 @@ export default function Navbar() {
                   className="w-full py-4 bg-red-600 text-white rounded-2xl font-black"
                 >
                   Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="h-px bg-slate-100 my-1" />
+
+                <button
+                  onClick={() => go("/login")}
+                  className="w-full py-4 rounded-2xl font-bold text-slate-700 bg-white/60 border border-slate-200"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => go("/register")}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold"
+                >
+                  Sign Up
                 </button>
               </>
             )}
