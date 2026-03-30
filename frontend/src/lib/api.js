@@ -1,10 +1,9 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000",
 });
 
-// endpoints that must NOT include Authorization header
 const NO_AUTH_PREFIXES = [
   "/api/auth/register/",
   "/api/auth/token/",
@@ -15,8 +14,6 @@ const NO_AUTH_PREFIXES = [
 
 api.interceptors.request.use((config) => {
   const url = config.url || "";
-
-  // If request is for auth endpoints, do not attach token
   const skipAuth = NO_AUTH_PREFIXES.some((p) => url.startsWith(p));
   if (skipAuth) return config;
 
@@ -26,20 +23,68 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Optional: global handler for invalid token errors
+let isRefreshing = false;
+let refreshQueue = [];
+
+function processQueue(error, token) {
+  refreshQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  refreshQueue = [];
+}
+
+function clearAuth() {
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  localStorage.removeItem("username");
+}
+
 api.interceptors.response.use(
   (res) => res,
-  (error) => {
-    const data = error?.response?.data;
-    const tokenInvalid =
-      data?.code === "token_not_valid" ||
-      (typeof data?.detail === "string" && data.detail.toLowerCase().includes("token")) ||
-      JSON.stringify(data || {}).toLowerCase().includes("token_not_valid");
+  async (error) => {
+    const originalRequest = error.config;
 
-    if (tokenInvalid) {
-      localStorage.removeItem("access");
-      localStorage.removeItem("refresh");
+    const isTokenError =
+      error.response?.status === 401 &&
+      !NO_AUTH_PREFIXES.some((p) => originalRequest.url?.startsWith(p));
+
+    if (!isTokenError || originalRequest._retry) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    const refreshToken = localStorage.getItem("refresh");
+    if (!refreshToken) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push({ resolve, reject });
+      }).then((token) => {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return api(originalRequest);
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const { data } = await api.post("/api/auth/refresh/", {
+        refresh: refreshToken,
+      });
+      localStorage.setItem("access", data.access);
+      processQueue(null, data.access);
+      originalRequest.headers.Authorization = `Bearer ${data.access}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      clearAuth();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
